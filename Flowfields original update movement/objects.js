@@ -244,6 +244,242 @@ class Coloring{
 
 }
 
+/**
+ * SpawnBoundary class defines regions where particles can spawn and collide.
+ * Supports multiple boundary types (rectangle, circle, grid, cell) and provides
+ * collision detection functionality for particle interactions.
+ * 
+ * @example
+ * // Create a rectangular boundary with collision support
+ * const boundary = new SpawnBoundary('rect', {
+ *     x: 100, y: 100, w: 400, h: 300
+ * });
+ * 
+ * // Create a particle that respects this boundary
+ * const particle = new Particle(null, boundary);
+ */
+class SpawnBoundary {
+    /**
+     * Creates a spawn boundary with specified type and parameters
+     * 
+     * @param {('rect'|'circle'|'grid'|'cell')} type - Type of boundary to create
+     * @param {Object} params - Configuration parameters
+     * @param {number} [params.x] - X coordinate for rect/circle center
+     * @param {number} [params.y] - Y coordinate for rect/circle center
+     * @param {number} [params.w] - Width for rectangular boundary
+     * @param {number} [params.h] - Height for rectangular boundary
+     * @param {number} [params.radius] - Radius for circular boundary
+     * @param {number} [params.rows] - Number of rows for grid boundary
+     * @param {number} [params.cols] - Number of columns for grid boundary
+     * @param {number} [params.cellSize] - Size of each cell for grid/cell boundary
+     * @param {number} [params.row] - Specific row for cell boundary
+     * @param {number} [params.col] - Specific column for cell boundary
+     * @param {number} [params.xOffset] - X offset for grid/cell positioning
+     * @param {number} [params.yOffset] - Y offset for grid/cell positioning
+     */
+    constructor(type, params = {}) {
+        this.type = type;
+        this.params = params;
+        
+        // Initialize boundary parameters based on type
+        switch(type) {
+            case 'rect':
+                // Rectangular boundary with optional position and size
+                this.params = {
+                    x: params.x || 0,
+                    y: params.y || 0,
+                    w: params.w || width,
+                    h: params.h || height
+                };
+                break;
+
+            case 'circle':
+                // Circular boundary with optional center and radius
+                this.params = {
+                    x: params.x || width/2,
+                    y: params.y || height/2,
+                    radius: params.radius || 100
+                };
+                break;
+
+            case 'grid':
+                // Grid boundary for multiple cell regions
+                this.params = {
+                    rows: params.rows || 1,
+                    cols: params.cols || 1,
+                    cellSize: params.cellSize || 50,
+                    xOffset: params.xOffset || 0,
+                    yOffset: params.yOffset || 0
+                };
+                break;
+
+            case 'cell':
+                // Single cell boundary within a grid
+                this.params = {
+                    row: params.row || 0,
+                    col: params.col || 0,
+                    cellSize: params.cellSize || 50,
+                    xOffset: params.xOffset || 0,
+                    yOffset: params.yOffset || 0
+                };
+                break;
+        }
+    }
+
+    /**
+     * Retrieves the boundary edges for collision detection.
+     * Converts different boundary types into a rectangular collision box.
+     * 
+     * @returns {Object} Boundary edges with properties:
+     *   - left: Left edge x-coordinate
+     *   - right: Right edge x-coordinate
+     *   - top: Top edge y-coordinate
+     *   - bottom: Bottom edge y-coordinate
+     */
+    getBoundaryEdges() {
+        switch(this.type) {
+            case 'rect':
+                // Direct edge calculation for rectangular boundaries
+                return {
+                    left: this.params.x,
+                    right: this.params.x + this.params.w,
+                    top: this.params.y,
+                    bottom: this.params.y + this.params.h
+                };
+            
+            case 'grid':
+                // Calculate edges for entire grid
+                return {
+                    left: this.params.xOffset,
+                    right: this.params.xOffset + (this.params.cols * this.params.cellSize),
+                    top: this.params.yOffset,
+                    bottom: this.params.yOffset + (this.params.rows * this.params.cellSize)
+                };
+            
+            case 'cell':
+                // Calculate edges for specific cell
+                return {
+                    left: this.params.xOffset + (this.params.col * this.params.cellSize),
+                    right: this.params.xOffset + ((this.params.col + 1) * this.params.cellSize),
+                    top: this.params.yOffset + (this.params.row * this.params.cellSize),
+                    bottom: this.params.yOffset + ((this.params.row + 1) * this.params.cellSize)
+                };
+            
+            case 'circle':
+                // Use bounding box of circle for edge detection
+                return {
+                    left: this.params.x - this.params.radius,
+                    right: this.params.x + this.params.radius,
+                    top: this.params.y - this.params.radius,
+                    bottom: this.params.y + this.params.radius
+                };
+        }
+    }
+
+    // ... (keep existing spawn methods from previous implementation)
+    /**
+     * Generates a random position within the boundary constraints.
+     * Uses different algorithms depending on boundary type.
+     * 
+     * @returns {p5.Vector} A valid spawn position within the boundary
+     */
+    getRandomPosition() {
+        switch(this.type) {
+            case 'rect':
+                // Simple random position within rectangle
+                return createVector(
+                    random(this.params.x, this.params.x + this.params.w),
+                    random(this.params.y, this.params.y + this.params.h)
+                );
+            
+            case 'circle': {
+                // Use sqrt for uniform distribution within circle
+                const angle = random(TWO_PI);
+                const r = sqrt(random(1)) * this.params.radius;
+                return createVector(
+                    this.params.x + r * cos(angle),
+                    this.params.y + r * sin(angle)
+                );
+            }
+            
+            case 'grid': {
+                // Pick random cell in grid
+                const randomCell = {
+                    row: floor(random(this.params.rows)),
+                    col: floor(random(this.params.cols))
+                };
+                return this.getCellPosition(randomCell.row, randomCell.col);
+            }
+            
+            case 'cell':
+                // Get position within specific cell
+                return this.getCellPosition(this.params.row, this.params.col);
+        }
+    }
+
+    /**
+     * Calculates a random position within a specific grid cell.
+     * Used by both grid and cell boundary types.
+     * 
+     * @param {number} row - Grid row index
+     * @param {number} col - Grid column index
+     * @returns {p5.Vector} Random position within the specified cell
+     */
+    getCellPosition(row, col) {
+        // Calculate cell position with offset and random position within cell
+        const x = this.params.xOffset + (col * this.params.cellSize) + random(this.params.cellSize);
+        const y = this.params.yOffset + (row * this.params.cellSize) + random(this.params.cellSize);
+        return createVector(x, y);
+    }
+
+    /**
+     * Checks if a given position is within the boundary constraints.
+     * 
+     * @param {p5.Vector} position - Position to check
+     * @returns {boolean} True if position is within boundary, false otherwise
+     */
+    contains(position) {
+        switch(this.type) {
+            case 'rect':
+                // Check if point is within rectangle bounds
+                return position.x >= this.params.x && 
+                       position.x <= this.params.x + this.params.w &&
+                       position.y >= this.params.y && 
+                       position.y <= this.params.y + this.params.h;
+            
+            case 'circle': {
+                // Check if point is within circle radius
+                const distance = dist(
+                    position.x, position.y,
+                    this.params.x, this.params.y
+                );
+                return distance <= this.params.radius;
+            }
+            
+            case 'grid': {
+                // Check if point is within any valid grid cell
+                const row = floor((position.y - this.params.yOffset) / this.params.cellSize);
+                const col = floor((position.x - this.params.xOffset) / this.params.cellSize);
+                return row >= 0 && row < this.params.rows &&
+                       col >= 0 && col < this.params.cols;
+            }
+            
+            case 'cell': {
+                // Check if point is within specific cell
+                const cellX = this.params.xOffset + (this.params.col * this.params.cellSize);
+                const cellY = this.params.yOffset + (this.params.row * this.params.cellSize);
+                return position.x >= cellX && 
+                       position.x <= cellX + this.params.cellSize &&
+                       position.y >= cellY && 
+                       position.y <= cellY + this.params.cellSize;
+            }
+        }
+    }
+}
+
+
+
+
 class Particle extends Coloring{
 
     constructor(position) {
