@@ -1,5 +1,5 @@
 const ROWS = 100, COLS = 200; // grid dimensions
-const SIZE = 10; // size of the cell in pixels
+const SIZE = 5; // size of the cell in pixels
 const CELL_COLOR = "#C1ABA6";
 const BACKGROUND_COLOR = "#533B4D"
 
@@ -10,7 +10,7 @@ const GRID_WIDTH = COLS * SIZE;
 const GRID_HEIGHT = ROWS * SIZE;
 const XPAD = (CANVAS_WIDTH - GRID_WIDTH) / 2;
 const YPAD = (CANVAS_HEIGHT - GRID_HEIGHT) / 2; // dynamic spacing of the grid on a square canvas
-const OFFSET = 0.5;
+const OFFSET = 0.0;
 const NOISE_SCALE = .019;
 let NOISE_SLICE = 1;
 

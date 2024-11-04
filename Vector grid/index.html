@@ -10,13 +10,21 @@
 
     <script src="libraries/p5.min.js"></script>
     <script src="libraries/p5.sound.min.js"></script>
+    <script src="p5.min.js"></script>
+    <!-- Load dependencies first -->
+    <script src="functions.js"></script>
+    <script src="objects.js"></script>
+    <!-- Then load files that depend on those classes -->
+    <script src="fields.js"></script>
+    <script src="config.js"></script>
+    <script src="sketch.js"></script>
   </head>
 
   <body>
-    <script src="sketch.js"></script>
+    <!-- <script src="sketch.js"></script>
     <script src="fields.js"></script>
     <script src="config.js"></script>
     <script src="objects.js"></script>
-    <script src="functions.js"></script>
+    <script src="functions.js"></script> -->
   </body>
 </html>

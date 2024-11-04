@@ -121,7 +121,7 @@ class Coloring{
      *      - `string` Provide a color palette such as `'[[1 2 3] [4 5 6]]'`
      *      - `string` Type in `generate` to create a new palette on the fly (perlin noise based)
      */
-    color(angle, palette = 1){
+    getColor(angle, palette = 1){
 
         this.current_angle = angle;
 
