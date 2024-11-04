@@ -1,6 +1,7 @@
 
 const noise_scale = 0.01;
 let zaxis = 0;
+let boundaryParams;
 function setup() {
   createCanvas(800, 500);
   colorMode(RGB, 1);
@@ -10,11 +11,13 @@ function setup() {
 
   particleCount = 10000;
   particles = [];
+
+
   for (let i = 0; i < particleCount; i++){
     let random_width = random(width);
     let random_height = random(height);
     let initial_position = createVector(random_width, random_height);
-    particles.push(new Particle(position = initial_position));
+    particles.push(new Particle(null, centerCircle));
     // particles[i].radius = random(8);
     particles[i].collisions = false;
     // particles[i].velocity = createVector(20, 2);
@@ -37,7 +40,7 @@ function setup() {
 
 function draw() {
   // background(0);
-  background(0, .1);
+  background(0, 1.1);
   
   stroke(255);
   noStroke();
@@ -88,11 +91,15 @@ function draw() {
     
 
     // draws a new particle if it leaves the screen
-    if (!onScreen(particles[i].position)){
-      particles[i].position = new_position();
-      // particles[i].update();
+    // if (!onScreen(particles[i].position)){
+    //   particles[i].position = new_position();
+    //   // particles[i].update();
       
-    }
+    // }
+    // Always enforce boundary constraints
+    if (!particles[i].boundary.contains(particles[i].position)) {
+      particles[i].position = particles[i].boundary.getRandomPosition();
+  }
 
     
 
@@ -109,7 +116,7 @@ function draw() {
     particles[i].position.y += sin(a) * 1;
 
     // add a color and render to the screen
-    particles[i].color(  a, 9);
+    particles[i].color(  a, 8);
     // particles[i].color(i, 9);
     fill(0);
     particles[i].show();

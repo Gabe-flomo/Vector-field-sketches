@@ -46,7 +46,7 @@ function draw() {
   grid.renderNoise(8);
   cell_count_output.html(out(grid.cell_count, 'Cell count: '));
   active_cell_count.html(out(grid.activeCellCount(), 'Active cells: '))
-  NOISE_SLICE += .005;
+  NOISE_SLICE += .0005;
   
 }
 
