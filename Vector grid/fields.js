@@ -6,7 +6,7 @@
 * Each cell knows its position in the grid coordinate system and canvas coordinate system
 * Each cell has a color that can be changed
 */
-class Cell extends Coloring {
+class Cell{
     /**
      * Creates a new cell
      * @param {number} row - The row (x) position in the grid
@@ -14,7 +14,6 @@ class Cell extends Coloring {
      * @param {number} size - The size of the cell in pixels
      */
     constructor(row, col, size) {
-        super();
         // Now row represents y (vertical) and col represents x (horizontal)
         this.gridPos = createVector(row, col);
         this.row = row;
@@ -29,10 +28,19 @@ class Cell extends Coloring {
 
         this.defaultColor = hexToColor("#C1ABA6");
         this.color = this.defaultColor;
+        this.coloring = new Coloring();
         this._active = false;
         this._noise = noise(this.row * NOISE_SCALE, this.column * NOISE_SCALE, NOISE_SLICE);
         this._noiseAngle = TAU * this.noise;
+
+        /** 
+        * @param {boolean} highNoiseDetail - Determines if the noise calculation should be based on the canvas position or cell position
+        */
+        this.highNoiseDetail = true;
+
+        this.fullLine = true;
     }
+
 
     get active(){
         return this._active;
@@ -58,15 +66,28 @@ class Cell extends Coloring {
 
  
     /**
-     * Changes the cell's color
-     * @param {string|p5.Color} newColor - The new color to set
+     * Sets the cell's color, handling different color input types
+     * @param {string|p5.Color|object} newColor - Color to set (hex string, p5.Color, or {x,y,z} vector)
+     * @param {number} [alpha=1] - Optional alpha value between 0-1
      */
     setColor(newColor, alpha = 1) {
-        // if newColor is string, assume it's a Hex code
-        this.color = typeof newColor === 'string' ? hexToColor(newColor, alpha = alpha) : color(newColor, alpha);
-        // this.x = this.color;
-        // this.y = this.color;
-        // this.z = this.color;
+        if (typeof newColor === 'string') {
+            // Handle hex strings
+            this.color = hexToColor(newColor, alpha);
+        } else if (newColor instanceof p5.Color) {
+            // Handle p5.Color objects
+            this.color = newColor;
+        } else if (newColor && typeof newColor === 'object' && 'x' in newColor) {
+            // Handle vector-like objects (from Coloring class)
+            this.color = color(
+                constrain(newColor.x, 0, 1), 
+                constrain(newColor.y, 0, 1), 
+                constrain(newColor.z, 0, 1)
+            );
+        } else {
+            // Fallback to default color if input is invalid
+            this.color = this.defaultColor;
+        }
     }
  
     /**
@@ -75,10 +96,61 @@ class Cell extends Coloring {
      * Renders as a rectangle with slight offset for spacing between cells
      */
     draw() {
-        // fill(this.color);
-        this.apply();
+        fill(this.color);
+        // this.apply();
         rect(this.canvasPos.x, this.canvasPos.y, this.size - OFFSET, this.size - OFFSET);
     }
+
+    /**
+     * Draws a line indicating the direction of the noise field at this cell's position
+     * @param {number} NOISE_SCALE - Scale factor for the Perlin noise field
+     * @param {number} zOffset - Z-axis offset for animated 3D noise
+     */
+    drawDirectionLine(palette = 8) {
+        
+        // Set line appearance
+        
+        let newColor = this.coloring.getColor(this.noiseAngle, palette);
+        let c = color(
+            constrain(newColor.x, 0, 1), 
+            constrain(newColor.y, 0, 1), 
+            constrain(newColor.z, 0, 1)
+        );
+        stroke(c);
+        strokeWeight(2);
+
+        // this.updateNoise();
+        let lineLength = (this.size * 0.5) - OFFSET;
+        // fill(1);
+        circle(this.canvasPos.x, this.canvasPos.y, this.size - OFFSET);
+        // circle(this.row, this.column, 2);
+        if (this.fullLine) {
+            
+            // Calculate endpoints using trigonometry
+            let x1 = this.canvasPos.x - cos(this.noiseAngle) * lineLength;  // Start point
+            let y1 = this.canvasPos.y - sin(this.noiseAngle) * lineLength;
+            let x2 = this.canvasPos.x + cos(this.noiseAngle) * lineLength;  // End point
+            let y2 = this.canvasPos.y + sin(this.noiseAngle) * lineLength;
+
+        
+            
+            // Draw the line
+            line(x1, y1, x2, y2);
+        } else {
+            // Half line mode: Draw from center to one edge
+            let x2 = this.canvasPos.x + cos(this.noiseAngle) * lineLength;
+            let y2 = this.canvasPos.y + sin(this.noiseAngle) * lineLength;
+            
+            // Draw from cell center to calculated endpoint
+            line(this.canvasPos.x, this.canvasPos.y, x2, y2);
+        }
+    }
+
+    updateNoise(){
+        let n;
+        n = this.highNoiseDetail ? noise(this.canvasPos.x * NOISE_SCALE, this.canvasPos.y * NOISE_SCALE, NOISE_SLICE) : noise(this.row * NOISE_SCALE, this.column * NOISE_SCALE, NOISE_SLICE);
+        this.noise = n;
+    } 
 
     /**
      * Checks if mouse position is within cell bounds
@@ -116,6 +188,7 @@ class Cell extends Coloring {
         this.rows = rows;     // Width of grid (x-axis)
         this.lastHoveredCell = null;
         this.cell_count = rows * cols;
+        this.highNoiseDetail = true;
     
         
         // Initialize 2D array of cells
@@ -221,29 +294,41 @@ class Cell extends Coloring {
         }
     }
 
-    updateNoise(cell){
-        let n = noise(cell.row * NOISE_SCALE, cell.column * NOISE_SCALE, NOISE_SLICE);
-        cell.noise = n;
-    } 
+    // updateNoise(cell){
+    //     let n = noise(cell.row * NOISE_SCALE, cell.column * NOISE_SCALE, NOISE_SLICE);
+    //     cell.noise = n;
+    // } 
 
 
-    renderNoise(colorChoice = 8){
+    renderNoise(colorChoice = 8, linePalette = 4){
 
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.columns; col++) {
                 let cell = this.cells[row][col];
-                // angle = TAU * cell.noise;
-                this.updateNoise(cell);
+                cell.highNoiseDetail = this.highNoiseDetail;
+                cell.updateNoise()
                 
-                if (colorChoice < 1){
-                    cell.setColor(color(sin(cell.noise)));
+                if (colorChoice == -1){
+                    noStroke();
+                    cell.draw();
+                    cell.drawDirectionLine(linePalette);
+                } else if (colorChoice == 0){
+                    cell.setColor(color(cell.noise));
+                    cell.draw();
+
                 } else {
-                    cell.getColor(cell.noiseAngle + millis() * 0.0005, colorChoice);
+                    // Get color from palette and convert to p5.Color
+                    let colorVector = cell.coloring.getColor(
+                        cell.noiseAngle + millis() * 0.0005, 
+                        colorChoice
+                    );
+                    cell.setColor(colorVector);
+                    cell.draw();
                 }
                 // cell.setColor(color(sin(cell.noiseAngle)));
                 
                 // cell.getColor(cell.noiseAngle , 9);
-                cell.draw();
+                
             }
         }        
 
