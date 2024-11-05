@@ -41,12 +41,14 @@ function draw() {
   //   grid.hoverEffect();
   // }
 
+  // noiseDetail(8, 0.5);
   
   // grid.render();
-  grid.renderNoise(8);
+  grid.highNoiseDetail = true;
+  grid.renderNoise(-1, 5);
   cell_count_output.html(out(grid.cell_count, 'Cell count: '));
   active_cell_count.html(out(grid.activeCellCount(), 'Active cells: '))
-  NOISE_SLICE += .0005;
+  NOISE_SLICE += .005;
   
 }
 
